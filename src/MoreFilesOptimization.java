@@ -1,17 +1,17 @@
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.io.PrintWriter;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class ForthOptimization implements Generation {
+public class MoreFilesOptimization implements Generation {
 
-    private String fileName = "res/numbersForth.txt";;
-    private String status = "Optimization Executor-Service :";
+    private String fileName = "res/executor-service/";;
+    private String status = "Optimization Executor-Service(more files):";
+    private String currentFileName;
 
     public String generator() throws IOException, InterruptedException {
 
@@ -19,38 +19,56 @@ public class ForthOptimization implements Generation {
 
         File file = new File(fileName);
         if (file.exists()) file.delete();
-        file.createNewFile();
+        file.mkdir();
 
         int countThreads = Runtime.getRuntime().availableProcessors();
+
+        Queue<PrintWriter> writers = new ConcurrentLinkedQueue<>();
+        for (int i = 0; i < countThreads; i++) {
+            currentFileName = fileName + "numbers_" + i + ".txt";
+            writers.add(new PrintWriter(currentFileName));
+        }
+
         ExecutorService executorService = Executors.newFixedThreadPool(countThreads);
 
         for (int regionCode = 0; regionCode < 100; regionCode++) {
-            executorService.submit(new Work(regionCode, fileName));
+            PrintWriter pw = writers.poll();
+            writers.add(pw);
+            executorService.submit(new Work2(regionCode, pw));
         }
 
         executorService.shutdown();
         executorService.awaitTermination(1, TimeUnit.DAYS);
 
+        for(PrintWriter writer : writers){
+            writer.close();
+        }
+
         long duration = System.currentTimeMillis() - start;
-        double length = (new File(fileName).length()) / 1024.0 / 1024.0;
 
-        return String.format("%-35s %6d ms,\t %-15s\t--->\t%5.2f MB \n", status, duration, fileName, length);
+        File[] files = file.listFiles();
+        double size = 0.0;
+
+        for( File f: files){
+            if (f.isFile()){
+                size += f.length();
+            }
+        }
+        return String.format("%-35s %6d ms,\t %-15s\t--->\t%5.2f MB \n", status, duration, fileName, (size / 1024.0 / 1024.0));
     }
-
 
     public String getName() {
         return this.getClass().getSimpleName();
     }
 }
 
-class Work implements Runnable {
+class Work2 implements Runnable {
     private int regionCode;
-    private Path path;
+    private PrintWriter writer;
 
-    Work(int regionCode, String fileName) throws IOException {
-
-        path = Paths.get(fileName);
+    Work2(int regionCode, PrintWriter writer) {
         this.regionCode = regionCode;
+        this.writer = writer;
     }
 
     @Override
@@ -72,11 +90,9 @@ class Work implements Runnable {
                 }
             }
         }
-        try {
-            Files.write(path, builder.toString().getBytes(), StandardOpenOption.APPEND);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        writer.write(builder.toString());
+        writer.flush();
+        //writer.close();
     }
     private static String padNumber(int number, int numberLength) {
         String numberStr = Integer.toString(number);

@@ -7,11 +7,12 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         List<Generation> carNumbers = new ArrayList<>();
-        carNumbers.add(new NoOptimization());
-        carNumbers.add(new FirstOptimization());
-        carNumbers.add(new SecondOptimization());
-        carNumbers.add(new ThirdOptimization());
+        //carNumbers.add(new NoOptimization());
+        //carNumbers.add(new FirstOptimization());
+        //carNumbers.add(new SecondOptimization());
+        //carNumbers.add(new ThirdOptimization());
         carNumbers.add(new ForthOptimization());
+        carNumbers.add(new MoreFilesOptimization());
 
         File file = new File("res/results.txt");
 
